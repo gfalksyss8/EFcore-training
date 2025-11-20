@@ -65,10 +65,11 @@ namespace Databasuppgift_2
                 // Databasen tillåter inte två rader med samma ProductName.
                 e.HasIndex(x => x.ProductName).IsUnique();
 
-                // Foreign keys 
+                // Foreign 
                 e.HasOne(x => x.Category)
-                                .WithMany(c => c.CategoryProducts)
+                                .WithMany(x => x.CategoryProducts)
                                 .HasForeignKey(x => x.CategoryID)
+                                .OnDelete(DeleteBehavior.Restrict)
                                 .IsRequired();
             });
         }

@@ -1,6 +1,7 @@
 ﻿using Databasuppgift_2;
 using Databasuppgift_2.Models;
 using Microsoft.EntityFrameworkCore;
+using System.IO;
 
 Console.WriteLine("DB: " + Path.Combine(AppContext.BaseDirectory, "shop.db"));
 // Säkerställ DB + migrations + Seed
@@ -52,9 +53,9 @@ while (true)
     while (true)
     {
         Console.WriteLine("\nChosen entity: " + choice);
-        Console.WriteLine("Commands: list | add | delete <id> | edit <id> | back");
+        Console.WriteLine("Commands: list | add | delete <id> | edit <id> | ProductsByCategory | back");
         Console.WriteLine(">");
-        var line = Console.ReadLine()?.Trim() ?? string.Empty;
+        var line = Console.ReadLine()?.Trim().ToLower() ?? string.Empty;
         // hoppa över tomma rader
         if (string.IsNullOrEmpty(line))
         {
@@ -100,6 +101,17 @@ while (true)
                 }
                 await DeleteAsync(choice, idD);
                 break;
+            case "productsbycategory":
+                if (parts.Length < 2 || !int.TryParse(parts[1], out var idC))
+                {
+                    Console.WriteLine("Usage: ProductsByCategory <id>");
+                    break;
+                }
+                await ProductsByCategoryAsync(idC);
+                break;
+            case "productsbyprice":
+                await ProductsByPriceAsync();
+                break;
             default:
                 Console.Write("Unknown command: ");
                 break;
@@ -140,7 +152,9 @@ static async Task AddAsync(string choice)
             }
             break;
 
+        // Om CRUD nås med choice products
         case "products":
+            // Name
             Console.WriteLine("Name: ");
             var pName = Console.ReadLine()?.Trim() ?? string.Empty;
 
@@ -150,9 +164,12 @@ static async Task AddAsync(string choice)
                 Console.WriteLine("Name is required (max 100).");
                 return;
             }
+
+            // Description
             Console.WriteLine("Description (Optional): ");
             var pDesc = Console.ReadLine()?.Trim() ?? string.Empty;
 
+            // Price
             Console.WriteLine("Price: ");
             var stringPrice = Console.ReadLine()?.Trim() ?? string.Empty;
             if (string.IsNullOrEmpty(stringPrice) || !int.TryParse(stringPrice, out var pPrice))
@@ -161,21 +178,21 @@ static async Task AddAsync(string choice)
                 return;
             }
 
+            // Category
             Console.WriteLine("Set category. Available Categories: ");
             foreach (var category in db.Categories)
             {
-                Console.Write(category.CategoryName + " | ");
+                Console.WriteLine(category.CategoryID + ". " + category.CategoryName);
             }
-            var pCategoryName = Console.ReadLine()?.Trim() ?? string.Empty;
-            if (string.IsNullOrEmpty(pCategoryName) || !db.Categories.Any(c => c.CategoryName.ToLower() == pCategoryName.ToLower()))
+            var stringID = Console.ReadLine()?.Trim() ?? string.Empty;
+            if (!int.TryParse(stringID, out var pID))
             {
-                Console.WriteLine("Category is required, and has to be one of the above");
+                Console.WriteLine("Choose category using its ID");
                 return;
             }
-            var pCategory = db.Categories.FirstOrDefault(c => c.CategoryName == pCategoryName);
 
-            db.Products.Add(new Product { ProductPrice = pPrice, ProductDescription = pDesc, ProductName = pName, Category = pCategory });
-            pCategory.CategoryProducts.Add(new Product { ProductPrice = pPrice, ProductDescription = pDesc, ProductName = pName, Category = pCategory});
+            db.Products.Add(new Product { ProductPrice = pPrice, ProductDescription = pDesc, ProductName = pName, CategoryID = pID });
+            //pCategory.CategoryProducts.Add(new Product { ProductPrice = pPrice, ProductDescription = pDesc, ProductName = pName, CategoryID = pID});
             try
             {
                 // Spara våra ändringar; Trigga en INSERT + all validering/constraints i databasen
@@ -285,7 +302,9 @@ static async Task EditAsync(string choice, int id)
             break;
         case "products":
             // Hämta raden vi vill uppdatera
-            var product = await db.Products.FirstOrDefaultAsync(x => x.ProductID == id);
+            var product = await db.Products
+                .Include(x => x.Category)
+                .FirstOrDefaultAsync(x => x.ProductID == id);
             if (product == null)
             {
                 Console.WriteLine("Product not found");
@@ -314,6 +333,15 @@ static async Task EditAsync(string choice, int id)
             if (!string.IsNullOrEmpty(stringPrice) && int.TryParse(stringPrice, out var productPrice))
             {
                 product.ProductPrice = productPrice;
+            }
+
+            // Uppdatera kategorin
+            Console.WriteLine(product.CategoryID + ". " + product.Category?.CategoryName + " ");
+            var productCategoryIDstring = Console.ReadLine()?.Trim() ?? string.Empty;
+            if (!string.IsNullOrEmpty(productCategoryIDstring) || int.TryParse(productCategoryIDstring, out var parse) ) 
+            {
+                int.TryParse(productCategoryIDstring, out var productCategoryID);
+                product.CategoryID = productCategoryID;
             }
 
             // Uppdatera db med ändringar
@@ -357,9 +385,44 @@ static async Task ListAsync(string choice)
             Console.WriteLine("Id | Price | Description | Name | Category ");
             foreach (var row in productRows)
             {
-                Console.WriteLine($"{row.ProductID} | {row.ProductPrice} | {row.ProductDescription} | {row.ProductName} | { row.Category.CategoryName }");
+                Console.WriteLine($"{row.ProductID} | {row.ProductPrice} | {row.ProductDescription} | {row.ProductName} | { row.Category?.CategoryName }");
             }
             break;
     }
 
+}
+
+static async Task ProductsByCategoryAsync(int CategoryID)
+{
+    using var db = new ShopContext();
+
+    var productRows = await db.Products
+                            .AsNoTracking()
+                            .Include(p => p.Category)
+                            .OrderBy(Product => Product.ProductID)
+                            .ToListAsync();
+    Console.WriteLine("Id | Price | Description | Name | Category ");
+    foreach (var row in productRows)
+    {
+        if (row.CategoryID == CategoryID)
+        {
+            Console.WriteLine($"{row.ProductID} | {row.ProductPrice} | {row.ProductDescription} | {row.ProductName} | {row.Category?.CategoryName}");
+        }
+    }
+}
+
+static async Task ProductsByPriceAsync()
+{
+    using var db = new ShopContext();
+
+    var productRows = await db.Products
+                            .AsNoTracking()
+                            .Include(p => p.Category)
+                            .OrderBy(Product => Product.ProductPrice)
+                            .ToListAsync();
+    Console.WriteLine("Id | Price | Description | Name | Category ");
+    foreach (var row in productRows)
+    { 
+        Console.WriteLine($"{row.ProductID} | {row.ProductPrice} | {row.ProductDescription} | {row.ProductName} | {row.Category?.CategoryName}");
+    }
 }

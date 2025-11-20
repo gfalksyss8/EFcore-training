@@ -25,6 +25,6 @@ namespace Databasuppgift_2.Models
         public string? CategoryDescription { get; set; }
 
         // Has Many Products
-        public List<Product>? CategoryProducts { get; set; } = new List<Product>();
+        public List<Product> CategoryProducts { get; set; } = new List<Product>();
     }
 }

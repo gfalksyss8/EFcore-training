@@ -20,11 +20,11 @@ namespace Databasuppgift_2.Models
 
         // Required text med max 100
         [Required, MaxLength(100)]
-        public string ProductName { get; set; } = null!;
+        public string ProductName { get; set; } = string.Empty;
 
         // Foreign keys inherited from Category
-        public int CategoryID { get; set; } 
+        public int CategoryID { get; set; }
 
-        public Category Category { get; set; } = null!;
+        public Category? Category { get; set; } 
     }
 }
