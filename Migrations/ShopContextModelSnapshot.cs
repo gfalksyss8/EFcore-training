@@ -16,6 +16,54 @@ namespace Databasuppgift_2.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.11");
 
+            modelBuilder.Entity("Databasuppgift_2.Models.Author", b =>
+                {
+                    b.Property<int>("AuthorID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("AuthorID");
+
+                    b.ToTable("Authors");
+                });
+
+            modelBuilder.Entity("Databasuppgift_2.Models.Book", b =>
+                {
+                    b.Property<int>("BookID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("AuthorID")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("BookID");
+
+                    b.HasIndex("AuthorID");
+
+                    b.HasIndex("Title")
+                        .IsUnique();
+
+                    b.ToTable("Books");
+                });
+
             modelBuilder.Entity("Databasuppgift_2.Models.Category", b =>
                 {
                     b.Property<int>("CategoryID")
@@ -70,6 +118,17 @@ namespace Databasuppgift_2.Migrations
                     b.ToTable("Products");
                 });
 
+            modelBuilder.Entity("Databasuppgift_2.Models.Book", b =>
+                {
+                    b.HasOne("Databasuppgift_2.Models.Author", "Author")
+                        .WithMany("Books")
+                        .HasForeignKey("AuthorID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Author");
+                });
+
             modelBuilder.Entity("Databasuppgift_2.Models.Product", b =>
                 {
                     b.HasOne("Databasuppgift_2.Models.Category", "Category")
@@ -79,6 +138,11 @@ namespace Databasuppgift_2.Migrations
                         .IsRequired();
 
                     b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("Databasuppgift_2.Models.Author", b =>
+                {
+                    b.Navigation("Books");
                 });
 
             modelBuilder.Entity("Databasuppgift_2.Models.Category", b =>

@@ -15,8 +15,10 @@ namespace Databasuppgift_2
     {
         // Db<Category> mappar till tabellen Category i databasen
         public DbSet<Category> Categories => Set<Category>();
-        // DB<Product> mappar till tabellen Product i databasen
+        // Db<Product> mappar till tabellen Product i databasen
         public DbSet<Product> Products => Set<Product>();
+        public DbSet<Author> Authors => Set<Author>();
+        public DbSet<Book> Books => Set<Book>();
 
         // Här berättar vi för EF Core att vi vill använda SQLite och var filen ska lämnas in
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -49,6 +51,7 @@ namespace Databasuppgift_2
                 // Has many products
                 e.HasMany(x => x.CategoryProducts);
             });
+
             modelBuilder.Entity<Product>(e =>
             {
                 // Sätter primärnyckel
@@ -72,7 +75,39 @@ namespace Databasuppgift_2
                                 .OnDelete(DeleteBehavior.Restrict)
                                 .IsRequired();
             });
-        }
 
+            modelBuilder.Entity<Book>(e =>
+            {
+                // Sätter primärnyckel
+                e.HasKey(x => x.BookID);
+
+                // Säkerställer regler för properties
+                e.Property(x => x.Title).HasMaxLength(100).IsRequired();
+                e.Property(x => x.Year).IsRequired();
+
+                // Unique
+                e.HasIndex(x => x.Title).IsUnique();
+
+                // Foreign
+                e.HasOne(x => x.Author)
+                                .WithMany(x => x.Books)
+                                .HasForeignKey(x => x.AuthorID)
+                                .OnDelete(DeleteBehavior.Restrict) 
+                                .IsRequired();
+            });
+
+            modelBuilder.Entity<Author>(e =>
+            {
+                // sätter primärnyckel
+                e.HasKey(x => x.AuthorID);
+
+                // Säkerställer regler för properties
+                e.Property(x => x.Name).HasMaxLength(100).IsRequired();
+                e.Property(x => x.Country).HasMaxLength(100).IsRequired();
+
+                // Has many books
+                e.HasMany(x => x.Books);
+            });
+        }
     }
 }
