@@ -19,6 +19,8 @@ namespace Databasuppgift_2
         public DbSet<Product> Products => Set<Product>();
         public DbSet<Author> Authors => Set<Author>();
         public DbSet<Book> Books => Set<Book>();
+        public DbSet<Member> Members => Set<Member>();
+        public DbSet<Loan> Loans => Set<Loan>();
 
         // Här berättar vi för EF Core att vi vill använda SQLite och var filen ska lämnas in
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -35,7 +37,7 @@ namespace Databasuppgift_2
             {
                 // Sätter primärnyckel
                 e.HasKey(x => x.CategoryID);
-                
+
                 // Säkerställer samma regler som data annotations (required + MaxLength)
                 e.Property(x => x.CategoryName)
                     .IsRequired().HasMaxLength(100);
@@ -92,7 +94,7 @@ namespace Databasuppgift_2
                 e.HasOne(x => x.Author)
                                 .WithMany(x => x.Books)
                                 .HasForeignKey(x => x.AuthorID)
-                                .OnDelete(DeleteBehavior.Restrict) 
+                                .OnDelete(DeleteBehavior.Restrict)
                                 .IsRequired();
             });
 
@@ -107,6 +109,37 @@ namespace Databasuppgift_2
 
                 // Has many books
                 e.HasMany(x => x.Books);
+            });
+            modelBuilder.Entity<Member>(e =>
+            {
+                // sätter primärnyckel
+                e.HasKey(x => x.MemberID);
+
+                // Properties, regler
+                e.Property(x => x.Name).IsRequired().HasMaxLength(100);
+                e.Property(x=>x.Email).HasMaxLength(100).IsRequired();
+
+                // Unik e-post
+                e.HasIndex(x => x.Email).IsUnique();
+            });
+            modelBuilder.Entity<Loan>(e =>
+            {
+                // PK
+                e.HasKey(x => x.LoanID);
+
+                // Properties
+                e.Property(x => x.LoanDate).IsRequired();
+                e.Property(x => x.DueDate).IsRequired();
+
+                // FK
+                e.HasOne(x => x.Member)
+                    .WithMany(x => x.Loans)
+                    .HasForeignKey(x => x.MemberID)
+                    .OnDelete(DeleteBehavior.Cascade); // Om ni tar bort en member, ta bort alla Loans
+                e.HasOne(x => x.Book)
+                    .WithMany()
+                    .HasForeignKey(x => x.BookID)
+                    .OnDelete(DeleteBehavior.Restrict); // Försöker du ta bort en bok
             });
         }
     }

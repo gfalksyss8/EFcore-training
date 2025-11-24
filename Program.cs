@@ -54,12 +54,43 @@ using (var db = new ShopContext())
         await db.SaveChangesAsync();
         Console.WriteLine("Seeded db (Book)!");
     }
+    // Seeding för members
+    if (!await db.Members.AnyAsync())
+    {
+        db.Members.AddRange(
+            new Member { Name = "Alice Andersson", Email = "alice.andersson@gmail.com" },
+            new Member { Name = "Anders Persson", Email = "anders.persson@hotmail.com" }
+        );
+        await db.SaveChangesAsync();
+        Console.WriteLine("Seeded db (Members)");
+    }
+    if (!await db.Loans.AnyAsync())
+    {
+        db.Loans.AddRange(
+            new Loan
+            {
+                MemberID = 1,
+                BookID = 1,
+                LoanDate = DateTime.Today.AddDays(-3),
+                DueDate = DateTime.Today.AddDays(9)
+            },
+            new Loan
+            {
+                MemberID = 2,
+                BookID = 2,
+                LoanDate = DateTime.Today.AddDays(-15),
+                DueDate = DateTime.Today.AddDays(-1)
+            }
+        );
+        await db.SaveChangesAsync();
+        Console.WriteLine("Seeded db (Loans)");
+    }
 }
 
 // CLI för CRUD; CREATE, READ, UPDATE, DELETE
 while (true)
 {
-    Console.WriteLine("\nChoose entity to manage: categories | products | authors | books | exit");
+    Console.WriteLine("\nChoose entity to manage: categories | products | authors | books | loans | members | exit");
     var choice = Console.ReadLine()?.Trim() ?? string.Empty;
     // hoppa över tomma rader
     if (string.IsNullOrEmpty(choice))
@@ -133,6 +164,9 @@ while (true)
                 break;
             case "productsbyprice":
                 await ProductsByPriceAsync();
+                break;
+            case "listlateloans":
+                await ListLateLoansAsync();
                 break;
             default:
                 Console.Write("Unknown command: ");
@@ -541,8 +575,52 @@ static async Task ListAsync(string choice)
                 Console.WriteLine($"{row.BookID} | {row.Title} | {row.Year} | {row.Author?.Name} ");
             }
             break;
+        case "loans":
+            var loanRows = await db.Loans
+                            .AsNoTracking()
+                            .Include(p => p.Member)
+                            .Include(p => p.Book)
+                            .OrderBy(l => l.DueDate)
+                            .ToListAsync();
+            Console.WriteLine("ID | Loan Date | Due Date | Loaner | Book | Late?");
+            foreach (var row in loanRows)
+            {
+                var isLate = row.DueDate < DateTime.Today;
+                Console.WriteLine($"{row.LoanID} | {row.LoanDate:d} | {row.DueDate:d} | {row.Member?.Name} | {row.Book?.Title} | {isLate}");
+            }
+            break;
     }
 
+}
+
+// Listar alla lån som är försenade
+static async Task ListLateLoansAsync()
+{
+    // hämta context
+    using var db = new ShopContext();
+    // Sätt alla lån i variabel med LINQ bestämmelser, ta ut alla som är försenade
+    var loanRows = await db.Loans
+                            .Include(p => p.Member)
+                            .Include(p => p.Book)
+                            .AsNoTracking()
+                            .Where(x => x.DueDate < DateTime.Today)
+                            .OrderBy(l => l.DueDate)
+                            .ToListAsync();
+
+    if (loanRows.Count == 0)
+    {
+        Console.WriteLine("No late loans found");
+        return;
+    }
+    // Initial tabellutskrift
+    Console.WriteLine("ID | Loan Date | Due Date | Loaner | Book ");
+
+    // För varje rad, skriv ut
+    foreach (var row in loanRows)
+    {
+        var isLate = row.DueDate < DateTime.Today;
+            Console.WriteLine($"{row.LoanID} | {row.LoanDate:d} | {row.DueDate:d} | {row.Member?.Name} | {row.Book?.Title}");
+    }
 }
 
 static async Task ProductsByCategoryAsync(int CategoryID)
